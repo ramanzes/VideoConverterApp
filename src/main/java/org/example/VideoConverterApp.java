@@ -17,6 +17,9 @@ public class VideoConverterApp extends JFrame {
     private JTextArea logArea;
     private ExecutorService executor;
     private AtomicInteger completedFiles;
+    private JLabel statusLabel;
+    private Timer timer;
+    private int dotCount = 0;
 
     public VideoConverterApp() {
         setTitle("Video Converter");
@@ -48,15 +51,28 @@ public class VideoConverterApp extends JFrame {
         convertButton = new JButton("Convert");
         convertButton.addActionListener(e -> startConversion());
 
+        // Статус процесса
+        statusLabel = new JLabel("", SwingConstants.CENTER);
+        statusLabel.setFont(new Font("Arial", Font.BOLD, 16));
+
+        // Панель для статуса и кнопки
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setLayout(new BorderLayout());
+        bottomPanel.add(statusLabel, BorderLayout.CENTER);
+        bottomPanel.add(convertButton, BorderLayout.SOUTH);
+
         // Добавление компонентов на форму
         add(topPanel, BorderLayout.NORTH);
         add(fileListScrollPane, BorderLayout.CENTER);
         add(new JScrollPane(logArea), BorderLayout.SOUTH);
-        add(convertButton, BorderLayout.SOUTH);
+        add(bottomPanel, BorderLayout.SOUTH);
 
         // Пул потоков для конвертации
         executor = Executors.newFixedThreadPool(5);
         completedFiles = new AtomicInteger(0);
+
+        // Таймер для обновления статуса
+        timer = new Timer(60000, e -> updateStatus()); // 60000 мс = 1 минута
     }
 
     private void chooseDirectory() {
@@ -96,7 +112,6 @@ public class VideoConverterApp extends JFrame {
         }
 
         // Уведомление о начале конвертации
-
         JOptionPane.showMessageDialog(this, "Конвертация началась! Результаты будут в том же каталоге, с теми же именами, как исходные файлы. Дождитесь завершения процесса.\n (Konvertatsiya nachalas'! Rezultaty budut v tom zhe kataloge, s temi zhe imenami, kak iskhodnye fayly. Dozhidites' zaversheniya protsessa.)");
 
         // Блокировка кнопок
@@ -106,23 +121,34 @@ public class VideoConverterApp extends JFrame {
         // Сброс счетчика завершенных файлов
         completedFiles.set(0);
 
+        // Запуск таймера для обновления статуса
+        dotCount = 0;
+        statusLabel.setText("PROCESS IS IN WORK");
+        timer.start();
+
         // Запуск конвертации
         for (File aviFile : aviFiles) {
             executor.submit(() -> {
                 convertFile(aviFile);
                 int completed = completedFiles.incrementAndGet();
                 if (completed == aviFiles.length) {
-                    // Разблокировка кнопок после завершения
+                    // Остановка таймера и разблокировка кнопок после завершения
                     SwingUtilities.invokeLater(() -> {
+                        timer.stop();
+                        statusLabel.setText("");
                         browseButton.setEnabled(true);
                         convertButton.setEnabled(true);
-                        JOptionPane.showMessageDialog(VideoConverterApp.this, "Конвертация завершена!");
-
                         JOptionPane.showMessageDialog(VideoConverterApp.this, "Конвертация завершена!\n(Konvertatsiya zavershena.)");
                     });
                 }
             });
         }
+    }
+
+    private void updateStatus() {
+        dotCount = (dotCount + 1) % 4; // Ограничиваем количество точек до 3
+        String dots = ".".repeat(dotCount);
+        statusLabel.setText("PROCESS IS IN WORK" + dots);
     }
 
     private void convertFile(File aviFile) {
@@ -158,7 +184,3 @@ public class VideoConverterApp extends JFrame {
         SwingUtilities.invokeLater(() -> new VideoConverterApp().setVisible(true));
     }
 }
-
-
-
-
