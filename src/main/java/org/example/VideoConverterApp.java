@@ -2,8 +2,10 @@ package org.example;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -107,7 +109,7 @@ public class VideoConverterApp extends JFrame {
         }
 
         // Уведомление о начале конвертации
-        JOptionPane.showMessageDialog(this, "Конвертация началась!");
+        JOptionPane.showMessageDialog(this, "Конвертация началась! Результаты будут в том же каталоге, с теми же именами, как исходные файлы. Дождитесь завершения процесса.");
 
         // Блокировка кнопок
         browseButton.setEnabled(false);
@@ -120,7 +122,7 @@ public class VideoConverterApp extends JFrame {
         // Запуск конвертации
         for (File aviFile : aviFiles) {
             executor.submit(() -> {
-                convertFile(aviFile);
+                convertFileWithProgress(aviFile);
                 int progress = (int) ((completedFiles.incrementAndGet() / (double) aviFiles.length) * 100);
                 SwingUtilities.invokeLater(() -> {
                     progressBar.setValue(progress);
@@ -135,7 +137,7 @@ public class VideoConverterApp extends JFrame {
         }
     }
 
-    private void convertFile(File aviFile) {
+    private void convertFileWithProgress(File aviFile) {
         String outputFileName = aviFile.getName().replace(".avi", ".mp4");
         File outputFile = new File(aviFile.getParent(), outputFileName);
 
@@ -152,7 +154,19 @@ public class VideoConverterApp extends JFrame {
         };
 
         try {
-            Process process = new ProcessBuilder(command).start();
+            Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            double totalDuration = getVideoDuration(aviFile); // Получаем общую длительность видео
+
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("time=")) {
+                    double currentTime = parseTime(line); // Парсим текущее время
+                    int progress = (int) ((currentTime / totalDuration) * 100);
+                    SwingUtilities.invokeLater(() -> progressBar.setValue(progress));
+                }
+            }
+
             int exitCode = process.waitFor();
             if (exitCode == 0) {
                 SwingUtilities.invokeLater(() -> logArea.append("Successfully converted: " + aviFile.getName() + "\n"));
@@ -162,6 +176,39 @@ public class VideoConverterApp extends JFrame {
         } catch (IOException | InterruptedException e) {
             SwingUtilities.invokeLater(() -> logArea.append("Error converting " + aviFile.getName() + ": " + e.getMessage() + "\n"));
         }
+    }
+
+    private double getVideoDuration(File aviFile) {
+        String[] command = {
+                "ffmpeg",
+                "-i", aviFile.getAbsolutePath()
+        };
+
+        try {
+            Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("Duration:")) {
+                    String duration = line.split("Duration: ")[1].split(",")[0];
+                    return parseTime(duration);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    private double parseTime(String timeString) {
+        String[] parts = timeString.split(":");
+        if (parts.length == 3) {
+            double hours = Double.parseDouble(parts[0]);
+            double minutes = Double.parseDouble(parts[1]);
+            double seconds = Double.parseDouble(parts[2]);
+            return hours * 3600 + minutes * 60 + seconds;
+        }
+        return 0;
     }
 
     public static void main(String[] args) {
