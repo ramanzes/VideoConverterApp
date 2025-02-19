@@ -1,4 +1,5 @@
 package org.example;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
@@ -6,6 +7,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class VideoConverterApp extends JFrame {
     private JTextField directoryField;
@@ -16,6 +18,7 @@ public class VideoConverterApp extends JFrame {
     private JProgressBar progressBar;
     private JTextArea logArea;
     private ExecutorService executor;
+    private AtomicInteger completedFiles;
 
     public VideoConverterApp() {
         setTitle("Video Converter");
@@ -51,15 +54,21 @@ public class VideoConverterApp extends JFrame {
         convertButton = new JButton("Convert");
         convertButton.addActionListener(e -> startConversion());
 
+        // Панель для прогресса и кнопки
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setLayout(new BorderLayout());
+        bottomPanel.add(progressBar, BorderLayout.CENTER);
+        bottomPanel.add(convertButton, BorderLayout.SOUTH);
+
         // Добавление компонентов на форму
         add(topPanel, BorderLayout.NORTH);
         add(fileListScrollPane, BorderLayout.CENTER);
         add(new JScrollPane(logArea), BorderLayout.SOUTH);
-        add(progressBar, BorderLayout.SOUTH);
-        add(convertButton, BorderLayout.SOUTH);
+        add(bottomPanel, BorderLayout.SOUTH);
 
         // Пул потоков для конвертации
         executor = Executors.newFixedThreadPool(5);
+        completedFiles = new AtomicInteger(0);
     }
 
     private void chooseDirectory() {
@@ -100,36 +109,16 @@ public class VideoConverterApp extends JFrame {
 
         // Сброс прогресса
         progressBar.setValue(0);
+        completedFiles.set(0);
 
-        // Запуск конвертации в фоновом потоке
-        SwingWorker<Void, Integer> worker = new SwingWorker<>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-                int totalFiles = aviFiles.length;
-                int completedFiles = 0;
-
-                for (File aviFile : aviFiles) {
-                    convertFile(aviFile);
-                    completedFiles++;
-                    int progress = (int) ((completedFiles / (double) totalFiles) * 100);
-                    publish(progress); // Обновление прогресса
-                }
-                return null;
-            }
-
-            @Override
-            protected void process(List<Integer> chunks) {
-                int latestProgress = chunks.get(chunks.size() - 1);
-                progressBar.setValue(latestProgress); // Обновление прогресс бара
-            }
-
-            @Override
-            protected void done() {
-                JOptionPane.showMessageDialog(VideoConverterApp.this, "Conversion complete!");
-            }
-        };
-
-        worker.execute();
+        // Запуск конвертации
+        for (File aviFile : aviFiles) {
+            executor.submit(() -> {
+                convertFile(aviFile);
+                int progress = (int) ((completedFiles.incrementAndGet() / (double) aviFiles.length) * 100);
+                SwingUtilities.invokeLater(() -> progressBar.setValue(progress));
+            });
+        }
     }
 
     private void convertFile(File aviFile) {
@@ -152,12 +141,12 @@ public class VideoConverterApp extends JFrame {
             Process process = new ProcessBuilder(command).start();
             int exitCode = process.waitFor();
             if (exitCode == 0) {
-                logArea.append("Successfully converted: " + aviFile.getName() + "\n");
+                SwingUtilities.invokeLater(() -> logArea.append("Successfully converted: " + aviFile.getName() + "\n"));
             } else {
-                logArea.append("Failed to convert: " + aviFile.getName() + "\n");
+                SwingUtilities.invokeLater(() -> logArea.append("Failed to convert: " + aviFile.getName() + "\n"));
             }
         } catch (IOException | InterruptedException e) {
-            logArea.append("Error converting " + aviFile.getName() + ": " + e.getMessage() + "\n");
+            SwingUtilities.invokeLater(() -> logArea.append("Error converting " + aviFile.getName() + ": " + e.getMessage() + "\n"));
         }
     }
 
