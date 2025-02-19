@@ -108,7 +108,7 @@ public class VideoConverterApp extends JFrame {
         }
 
         // Уведомление о начале конвертации
-        JOptionPane.showMessageDialog(this, "Конвертация началась! Результаты будут в том же каталоге, с теми же именами, как исходные файлы. Дождитесь завершения процесса. (Konvertatsiya nachalas'! Rezultaty budut v tom zhe kataloge, s temi zhe imenami, kak iskhodnye fayly. Dozhidites' zaversheniya protsessa.)");
+        JOptionPane.showMessageDialog(this, "Конвертация началась! Результаты будут в том же каталоге, с теми же именами, как исходные файлы. Дождитесь завершения процесса.\n (Konvertatsiya nachalas'! Rezultaty budut v tom zhe kataloge, s temi zhe imenami, kak iskhodnye fayly. Dozhidites' zaversheniya protsessa.)");
         // Блокировка кнопок
         browseButton.setEnabled(false);
         convertButton.setEnabled(false);
@@ -128,7 +128,7 @@ public class VideoConverterApp extends JFrame {
                         // Разблокировка кнопок после завершения
                         browseButton.setEnabled(true);
                         convertButton.setEnabled(true);
-                        JOptionPane.showMessageDialog(VideoConverterApp.this, "Конвертация завершена!(Konvertatsiya zavershena.)");
+                        JOptionPane.showMessageDialog(VideoConverterApp.this, "Конвертация завершена!\n(Konvertatsiya zavershena.)");
                     }
                 });
             });
