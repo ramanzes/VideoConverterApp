@@ -4,7 +4,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -15,7 +14,6 @@ public class VideoConverterApp extends JFrame {
     private JButton convertButton;
     private JList<String> fileList;
     private DefaultListModel<String> fileListModel;
-    private JProgressBar progressBar;
     private JTextArea logArea;
     private ExecutorService executor;
     private AtomicInteger completedFiles;
@@ -42,10 +40,6 @@ public class VideoConverterApp extends JFrame {
         fileList = new JList<>(fileListModel);
         JScrollPane fileListScrollPane = new JScrollPane(fileList);
 
-        // Прогресс бар
-        progressBar = new JProgressBar(0, 100);
-        progressBar.setStringPainted(true);
-
         // Лог
         logArea = new JTextArea();
         logArea.setEditable(false);
@@ -54,17 +48,11 @@ public class VideoConverterApp extends JFrame {
         convertButton = new JButton("Convert");
         convertButton.addActionListener(e -> startConversion());
 
-        // Панель для прогресса и кнопки
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.setLayout(new BorderLayout());
-        bottomPanel.add(progressBar, BorderLayout.CENTER);
-        bottomPanel.add(convertButton, BorderLayout.SOUTH);
-
         // Добавление компонентов на форму
         add(topPanel, BorderLayout.NORTH);
         add(fileListScrollPane, BorderLayout.CENTER);
         add(new JScrollPane(logArea), BorderLayout.SOUTH);
-        add(bottomPanel, BorderLayout.SOUTH);
+        add(convertButton, BorderLayout.SOUTH);
 
         // Пул потоков для конвертации
         executor = Executors.newFixedThreadPool(5);
@@ -108,29 +96,31 @@ public class VideoConverterApp extends JFrame {
         }
 
         // Уведомление о начале конвертации
+
         JOptionPane.showMessageDialog(this, "Конвертация началась! Результаты будут в том же каталоге, с теми же именами, как исходные файлы. Дождитесь завершения процесса.\n (Konvertatsiya nachalas'! Rezultaty budut v tom zhe kataloge, s temi zhe imenami, kak iskhodnye fayly. Dozhidites' zaversheniya protsessa.)");
+
         // Блокировка кнопок
         browseButton.setEnabled(false);
         convertButton.setEnabled(false);
 
-        // Сброс прогресса
-        progressBar.setValue(0);
+        // Сброс счетчика завершенных файлов
         completedFiles.set(0);
 
         // Запуск конвертации
         for (File aviFile : aviFiles) {
             executor.submit(() -> {
                 convertFile(aviFile);
-                int progress = (int) ((completedFiles.incrementAndGet() / (double) aviFiles.length) * 100);
-                SwingUtilities.invokeLater(() -> {
-                    progressBar.setValue(progress);
-                    if (completedFiles.get() == aviFiles.length) {
-                        // Разблокировка кнопок после завершения
+                int completed = completedFiles.incrementAndGet();
+                if (completed == aviFiles.length) {
+                    // Разблокировка кнопок после завершения
+                    SwingUtilities.invokeLater(() -> {
                         browseButton.setEnabled(true);
                         convertButton.setEnabled(true);
+                        JOptionPane.showMessageDialog(VideoConverterApp.this, "Конвертация завершена!");
+
                         JOptionPane.showMessageDialog(VideoConverterApp.this, "Конвертация завершена!\n(Konvertatsiya zavershena.)");
-                    }
-                });
+                    });
+                }
             });
         }
     }
@@ -165,8 +155,10 @@ public class VideoConverterApp extends JFrame {
     }
 
     public static void main(String[] args) {
-
-        Locale.setDefault(new Locale("ru","RU"));
         SwingUtilities.invokeLater(() -> new VideoConverterApp().setVisible(true));
     }
 }
+
+
+
+
