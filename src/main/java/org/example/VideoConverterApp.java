@@ -4,7 +4,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -107,6 +106,13 @@ public class VideoConverterApp extends JFrame {
             return;
         }
 
+        // Уведомление о начале конвертации
+        JOptionPane.showMessageDialog(this, "Конвертация началась!");
+
+        // Блокировка кнопок
+        browseButton.setEnabled(false);
+        convertButton.setEnabled(false);
+
         // Сброс прогресса
         progressBar.setValue(0);
         completedFiles.set(0);
@@ -116,7 +122,15 @@ public class VideoConverterApp extends JFrame {
             executor.submit(() -> {
                 convertFile(aviFile);
                 int progress = (int) ((completedFiles.incrementAndGet() / (double) aviFiles.length) * 100);
-                SwingUtilities.invokeLater(() -> progressBar.setValue(progress));
+                SwingUtilities.invokeLater(() -> {
+                    progressBar.setValue(progress);
+                    if (completedFiles.get() == aviFiles.length) {
+                        // Разблокировка кнопок после завершения
+                        browseButton.setEnabled(true);
+                        convertButton.setEnabled(true);
+                        JOptionPane.showMessageDialog(VideoConverterApp.this, "Конвертация завершена!");
+                    }
+                });
             });
         }
     }
