@@ -167,6 +167,23 @@ public class VideoConverterApp extends JFrame {
                 outputFile.getAbsolutePath()
         };
 
+//        String[] command = {
+//                "ffmpeg",
+//                "-i", aviFile.getAbsolutePath(),
+//                "-c:v", "libx264",           // Кодек видео
+//                "-profile:v", "baseline",    // Профиль Baseline для максимальной совместимости
+//                "-level", "3.0",             // Уровень H.264
+//                "-preset", "slow",           // Скорость сжатия
+//                "-crf", "22",                // Качество видео (меньше значение = лучше качество)
+//                "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", // Убедитесь, что разрешение кратно 2
+//                "-c:a", "aac",               // Кодек аудио
+//                "-b:a", "192k",              // Битрейт аудио
+//                "-movflags", "+faststart",   // Для потоковой передачи
+//                outputFile.getAbsolutePath()
+//        };
+
+
+
         try {
             Process process = new ProcessBuilder(command).start();
             int exitCode = process.waitFor();
